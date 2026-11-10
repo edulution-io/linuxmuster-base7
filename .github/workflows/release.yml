@@ -8,7 +8,8 @@
 #   linuxmuster-base7 (7.3.5-0) lmn73; urgency=medium
 #
 # Required repository secrets:
-#   REPO_SSH_KEY    GitHub SSH key for the linuxmuster/deb repository
+#   REPO_SSH_KEY    GitHub SSH key for the edulution-io/edulution-package-server
+#                   repository
 #
 # thomas@linuxmuster.net
 # 20260427
@@ -49,6 +50,7 @@ jobs:
 
     outputs:
       version: ${{ steps.meta.outputs.version }}
+      tag: ${{ steps.meta.outputs.tag }}
       distribution: ${{ steps.meta.outputs.distribution }}
 
     steps:
@@ -61,7 +63,14 @@ jobs:
         id: meta
         working-directory: build
         run: |
-          echo "version=$(dpkg-parsechangelog -S Version)" >> "$GITHUB_OUTPUT"
+          VERSION="$(dpkg-parsechangelog -S Version)"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          # git refuses both ':' and '~' in a refname, and the fork version
+          # carries both: the epoch "1:" and the suffix "~edu" (see
+          # debian/changelog). The tag spells the version without the epoch
+          # and with a dash, 1:7.4.24~edu -> 7.4.24-edu, while the package
+          # keeps the version it was built with.
+          echo "tag=${VERSION#*:}" | tr '~' '-' >> "$GITHUB_OUTPUT"
           echo "distribution=$(dpkg-parsechangelog -S Distribution)" >> "$GITHUB_OUTPUT"
 
       - name: Build package
@@ -91,7 +100,7 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ needs.build.outputs.version }}
+          tag_name: ${{ needs.build.outputs.tag }}
           files: packages/*.deb
           generate_release_notes: true
 
@@ -109,7 +118,7 @@ jobs:
       - name: Clone archive repository
         uses: actions/checkout@v4
         with:
-          repository: linuxmuster/deb
+          repository: edulution-io/edulution-package-server
           ssh-key: ${{ secrets.REPO_SSH_KEY }}
           path: deb
 
@@ -118,16 +127,29 @@ jobs:
           PACKAGE="linuxmuster-base7"
           DISTRIBUTION="${{ needs.build.outputs.distribution }}"
           VERSION="${{ needs.build.outputs.version }}"
-          BRANCH="$(echo "$PACKAGE-$DISTRIBUTION-$VERSION" | sed 's/~/tilde/')"
 
-          mkdir -p "deb/packages/$PACKAGE/$DISTRIBUTION"
-          rm -rf "deb/packages/$PACKAGE/$DISTRIBUTION/"*
-          cp packages/* "deb/packages/$PACKAGE/$DISTRIBUTION/"
+          # The package server's suites are Ubuntu codenames, the changelog
+          # keeps the linuxmuster generation. Only 7.4 on Ubuntu 26.04 is
+          # maintained, so anything else is a mistake and must not be
+          # published to the wrong suite.
+          case "$DISTRIBUTION" in
+            lmn74) CODENAME="resolute" ;;
+            *) echo "Unexpected distribution '$DISTRIBUTION' in debian/changelog" >&2
+               exit 1 ;;
+          esac
+
+          # A branch name may not contain ':' or '~', and the fork version
+          # carries both: the epoch and the ~edu suffix.
+          BRANCH="$(echo "$PACKAGE-$CODENAME-$VERSION" | tr ':~' '--')"
+
+          mkdir -p "deb/packages/$PACKAGE/$CODENAME"
+          rm -rf "deb/packages/$PACKAGE/$CODENAME/"*
+          cp packages/* "deb/packages/$PACKAGE/$CODENAME/"
 
           cd deb
           git config user.name github-actions
           git config user.email github-actions@github.com
           git checkout -b "update/$BRANCH"
           git add .
-          git commit -m "Update $PACKAGE/$DISTRIBUTION to $VERSION (by GitHub Actions)"
+          git commit -m "Update $PACKAGE/$CODENAME to $VERSION (by GitHub Actions)"
           git push --set-upstream origin "update/$BRANCH"

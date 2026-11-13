@@ -2,7 +2,7 @@ linuxmuster-base7 (1:7.4.24~edu) lmn74; urgency=low
 
   * edulution fork. The package keeps its upstream name, so the epoch 1: is
     what makes it win against the same package from deb.linuxmuster.net.
-  * e version carries the suffix ~edu on top of the epoch, so apt policy,
+  * The version carries the suffix ~edu on top of the epoch, so apt policy,
     dpkg -l and the motd show at a glance that this is the edulution build
     and not the upstream package. "~" sorts before the empty string, so
     1:7.4.24~edu stays below a hypothetical 1:7.4.24 while still outranking

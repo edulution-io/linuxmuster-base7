@@ -12,7 +12,7 @@ This module (executed last in setup sequence):
 - Restarts apparmor service
 - Writes school name to sophomorix configuration
 - Imports devices from devices.csv into system
-- Restarts webui service
+- Restarts the api service
 - Waits for firewall to be ready (if not skipped)
 - Imports subnet configuration
 - Creates web proxy SSO keytab for authentication
@@ -117,11 +117,13 @@ except Exception as error:
     printScript(f' Failed: {error}', '', True, True, False, len(msg))
     sys.exit(1)
 
-# Restart webui service
-msg = 'Restarting linuxmuster-webui service '
+# Restart the api service so that it reads the configuration written during
+# the setup. linuxmuster-webui is not installed in this fork, so its restart
+# is gone with it.
+msg = 'Restarting linuxmuster-api service '
 printScript(msg, '', False, False, True)
 try:
-    runWithLog(['systemctl', 'restart', 'linuxmuster-webui.service'], logfile)
+    runWithLog(['systemctl', 'restart', 'linuxmuster-api.service'], logfile)
     printScript(' Success!', '', True, True, False, len(msg))
 except Exception as error:
     printScript(f' Failed: {error}', '', True, True, False, len(msg))

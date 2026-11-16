@@ -5,7 +5,7 @@
 #                validation.
 # Signed-off by: thomas@linuxmuster.net
 # Assisted by  : Claude
-# Date         : 20261001
+# Date         : 20261116
 #
 """
 Regression tests for linuxmuster_base7.functions.network.isValidHostIpv4().
@@ -90,13 +90,21 @@ def test_valid_group_is_accepted(school):
     assert device['group'] == 'raum101'
 
 
-@pytest.mark.parametrize('group', ['abc+raum101', 'raum+101', '+raum101', 'raum101+'])
+@pytest.mark.parametrize('group', ['win11_edu', 'raum_101', '_raum101', 'raum101_', 'win11-efi_2'])
 @pytest.mark.parametrize('school', ['default-school', 'abc'])
-def test_group_with_plus_is_rejected(group, school):
+def test_group_with_single_underscore_is_accepted(group, school):
+    is_valid, device = validateDeviceRow(_device_row(group), school)
+    assert is_valid is True
+    assert device['group'] == group
+
+
+@pytest.mark.parametrize('group', ['abc__raum101', 'raum__101', '__raum101', 'raum101__', 'a___b'])
+@pytest.mark.parametrize('school', ['default-school', 'abc'])
+def test_group_with_separator_is_rejected(group, school):
     assert validateDeviceRow(_device_row(group), school) == (False, None)
 
 
-def test_plus_in_group_does_not_modify_the_row():
-    row = _device_row('abc+raum101')
+def test_rejected_group_does_not_modify_the_row():
+    row = _device_row('abc__raum101')
     validateDeviceRow(row, 'abc')
-    assert row == _device_row('abc+raum101')
+    assert row == _device_row('abc__raum101')

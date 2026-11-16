@@ -5,7 +5,7 @@
 #                network interface helpers
 # Signed-off by: thomas@linuxmuster.net
 # Assisted by  : Claude
-# Date         : 20261001
+# Date         : 20261116
 #
 
 import csv
@@ -19,9 +19,7 @@ sys.path.insert(0, '/usr/lib/linuxmuster')
 import environment
 import netifaces
 
-# reserved in hardware group names: separates school and group in the
-# school-qualified LINBO group id (<school>+<group>)
-LINBO_GROUP_SEPARATOR = '+'
+from .linbo import LINBO_GROUP_SEPARATOR
 
 
 # test if ip matches subnet
@@ -116,8 +114,8 @@ def validateDeviceRow(row, school='default-school'):
 
     Extracts device fields, applies hostname transformation for non-default
     schools, and validates group, hostname, MAC address, and IP address.
-    A group containing '+' is invalid, because '+' separates school and
-    group in the school-qualified LINBO group id.
+    A group containing LINBO_GROUP_SEPARATOR ('__') is invalid, because it
+    separates school and group in the school-qualified LINBO group id.
 
     Args:
         row: CSV row as list of fields
@@ -142,8 +140,8 @@ def validateDeviceRow(row, school='default-school'):
         ip = row[4]
         pxe = row[10]
 
-        # '+' is reserved for the school-qualified LINBO group id
-        # (<school>+<group>), so a group must not contain it
+        # LINBO_GROUP_SEPARATOR is reserved for the school-qualified LINBO
+        # group id (<school>__<group>), so a group must not contain it
         if LINBO_GROUP_SEPARATOR in group:
             return False, None
 

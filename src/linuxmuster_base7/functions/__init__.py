@@ -6,9 +6,7 @@
 #                every name that used to live in the single functions.py
 #                file, now split into cohesive submodules (see issue #129):
 #                core, files, network, samba, linbo, certs, remote, security.
-# Signed-off by: thomas@linuxmuster.net
-# Assisted by  : Claude
-# Date         : 20260915
+# Date         : 20261116
 #
 
 import datetime  # re-exported: some callers do "from ...functions import datetime"
@@ -25,7 +23,8 @@ from .network import ipMatchSubnet, getIpSubnet, getIpBcAddress, \
 from .samba import getBaseDN, adSearch, isDynamicIpDevice, sambaTool
 from .linbo import getGrubPart, getGrubOstype, readStartconf, \
     getStartconfOption, getStartconfPartlabel, getStartconfPartnr, \
-    setGlobalStartconfOption, getStartconfOsValues, getLinboVersion
+    setGlobalStartconfOption, getStartconfOsValues, getLinboGroupId, \
+    splitLinboGroupId, getLinboVersion, LINBO_GROUP_SEPARATOR
 from .certs import encodeCertToBase64, renewCaCertificate, \
     signCertificateWithCa, createCertificateChain, createCnfFromTemplate, \
     createServerCert, buildCaSubjectAndSan, writeCaCertificate
@@ -53,7 +52,8 @@ __all__ = [
     # linbo
     'getGrubPart', 'getGrubOstype', 'readStartconf', 'getStartconfOption',
     'getStartconfPartlabel', 'getStartconfPartnr', 'setGlobalStartconfOption',
-    'getStartconfOsValues', 'getLinboVersion',
+    'getStartconfOsValues', 'getLinboGroupId', 'splitLinboGroupId',
+    'getLinboVersion', 'LINBO_GROUP_SEPARATOR',
     # certs
     'encodeCertToBase64', 'renewCaCertificate', 'signCertificateWithCa',
     'createCertificateChain', 'createCnfFromTemplate', 'createServerCert',

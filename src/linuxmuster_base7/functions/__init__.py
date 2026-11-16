@@ -6,8 +6,6 @@
 #                every name that used to live in the single functions.py
 #                file, now split into cohesive submodules (see issue #129):
 #                core, files, network, samba, linbo, certs, remote, security.
-# Signed-off by: thomas@linuxmuster.net
-# Assisted by  : Claude
 # Date         : 20261116
 #
 

@@ -2,8 +2,6 @@
 #
 # Filename     : linbo.py
 # Description  : LINBO start.conf and GRUB boot configuration helpers
-# Signed-off by: thomas@linuxmuster.net
-# Assisted by  : Claude
 # Date         : 20261116
 #
 

@@ -3,8 +3,6 @@
 # Filename     : network.py
 # Description  : Subnet/device CSV parsing, IP/hostname/MAC validation and
 #                network interface helpers
-# Signed-off by: thomas@linuxmuster.net
-# Assisted by  : Claude
 # Date         : 20261116
 #
 

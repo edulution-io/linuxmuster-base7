@@ -3,8 +3,6 @@
 # Filename     : test_functions_network.py
 # Description  : Regression tests for isValidHostIpv4()'s subnet-aware
 #                validation.
-# Signed-off by: thomas@linuxmuster.net
-# Assisted by  : Claude
 # Date         : 20261116
 #
 """

@@ -4,7 +4,7 @@
 # Description  : LINBO start.conf and GRUB boot configuration helpers
 # Signed-off by: thomas@linuxmuster.net
 # Assisted by  : Claude
-# Date         : 20261001
+# Date         : 20261116
 #
 
 import configparser
@@ -210,26 +210,34 @@ def getStartconfOsValues(startconf):
         return None
 
 
+# separates school and group in the school-qualified linbo group id
+# (<school>__<group>). linbo7's linbo_sync strips the school with the same
+# separator (${HOSTGROUP#*__}), keep both in step.
+LINBO_GROUP_SEPARATOR = '__'
+
+
 # return school-qualified linbo group id (see issue #206)
 def getLinboGroupId(school, group):
     """Return the school-qualified LINBO group id of a device group.
 
     default-school keeps the plain group, so single-school installations keep
-    their file names. Every other school gets '<school>+<group>'. Neither
-    part can contain '+' (sophomorix restricts group names to [A-Za-z0-9_-],
-    and the school is part of every device hostname, which isValidHostname()
-    checks), so the id can be split again with splitLinboGroupId().
+    their file names. Every other school gets '<school>__<group>'. A school
+    name cannot contain '_' (it is part of every device hostname, which
+    isValidHostname() restricts to [a-z0-9-]), so the first
+    LINBO_GROUP_SEPARATOR always ends the school. A group must not contain
+    LINBO_GROUP_SEPARATOR, otherwise a default-school group would look
+    qualified; validateDeviceRow() rejects such groups.
 
     Args:
         school: School name, e.g. 'default-school' or 'abc'
         group: Device group from devices.csv, e.g. 'raum101'
 
     Returns:
-        'raum101' for default-school, 'abc+raum101' otherwise
+        'raum101' for default-school, 'abc__raum101' otherwise
     """
     if school == 'default-school':
         return group
-    return school + '+' + group
+    return school + LINBO_GROUP_SEPARATOR + group
 
 
 # return school and group of a linbo group id
@@ -237,13 +245,14 @@ def splitLinboGroupId(group_id):
     """Split a LINBO group id into school and group, see getLinboGroupId().
 
     Args:
-        group_id: LINBO group id, e.g. 'raum101' or 'abc+raum101'
+        group_id: LINBO group id, e.g. 'raum101' or 'abc__raum101'
 
     Returns:
         Tuple (school, group): ('default-school', 'raum101') for an id
-        without '+', otherwise split on the first '+', e.g. ('abc', 'raum101')
+        without LINBO_GROUP_SEPARATOR, otherwise split on the first one,
+        e.g. ('abc', 'raum101')
     """
-    school, separator, group = group_id.partition('+')
+    school, separator, group = group_id.partition(LINBO_GROUP_SEPARATOR)
     if not separator:
         return 'default-school', group_id
     return school, group

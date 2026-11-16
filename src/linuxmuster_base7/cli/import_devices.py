@@ -299,8 +299,17 @@ def migrateLegacyGroupFiles(group_id, legacy_groups):
     old_startconf = environment.LINBODIR + '/start.conf.' + group
     new_startconf = environment.LINBODIR + '/start.conf.' + group_id
     if os.path.isfile(old_startconf) and not os.path.exists(new_startconf):
-        shutil.copy2(old_startconf, new_startconf)
-        setGlobalStartconfOption(new_startconf, 'Group', group_id)
+        pending_startconf = new_startconf + '.migrating'
+        shutil.copy2(old_startconf, pending_startconf)
+        try:
+            group_set = setGlobalStartconfOption(pending_startconf, 'Group', group_id)
+        except AttributeError:
+            group_set = False
+        if group_set:
+            os.replace(pending_startconf, new_startconf)
+        else:
+            os.remove(pending_startconf)
+            logToFile('Could not set the group in the copy of ' + old_startconf + ', not migrated.')
     old_grubcfg = environment.LINBOGRUBDIR + '/' + group + '.cfg'
     new_grubcfg = environment.LINBOGRUBDIR + '/' + group_id + '.cfg'
     if os.path.isfile(old_grubcfg) and not os.path.exists(new_grubcfg):
@@ -664,6 +673,10 @@ def generateGrubConfigsForGroups(school):
 
     # read what the school linked before, doPxeGroupsBySchool() rewrites it
     legacy_groups = readLegacyLinkGroups(school)
+    # carry the files over before the csv is rewritten, so an interrupted run
+    # still finds the school's legacy groups in the old csv on the next one
+    for legacy_group in sorted(legacy_groups):
+        migrateLegacyGroupFiles(getLinboGroupId(school, legacy_group), legacy_groups)
 
     # Create symlinks from devices to their group configurations
     pxe_groups = doPxeGroupsBySchool(school=school)

@@ -18,6 +18,7 @@ environment module are pointed to tmp_path.
 """
 
 import io
+import shutil
 
 import pytest
 
@@ -257,3 +258,55 @@ def test_read_legacy_link_groups_ignores_qualified_and_foreign_rows(linbodir):
     assert import_devices.readLegacyLinkGroups('abc') == {'raum101'}
     assert import_devices.readLegacyLinkGroups('default-school') == set()
     assert import_devices.readLegacyLinkGroups('other') == set()
+
+
+def test_an_interrupted_import_migrates_on_the_next_run(monkeypatch, linbodir):
+    (linbodir / 'start.conf.raum101').write_text(PLAIN_STARTCONF)
+    writeLegacyLinks(linbodir, 'abc', ['raum101'])
+    real_copy = shutil.copy2
+
+    def failing_copy(src, dst, *args, **kwargs):
+        raise OSError('disk full')
+
+    monkeypatch.setattr(import_devices.shutil, 'copy2', failing_copy)
+    with pytest.raises(OSError):
+        runImport(monkeypatch, linbodir, 'abc')
+    assert not (linbodir / 'start.conf.abc__raum101').exists()
+
+    monkeypatch.setattr(import_devices.shutil, 'copy2', real_copy)
+    runImport(monkeypatch, linbodir, 'abc')
+    assert 'Group = abc__raum101\n' in (linbodir / 'start.conf.abc__raum101').read_text()
+
+
+def test_a_start_conf_without_linbo_section_is_not_half_migrated(monkeypatch, linbodir):
+    (linbodir / 'start.conf.raum101').write_text('[OS]\nBaseImage=ubuntu.qcow2\n')
+    import_devices.migrateLegacyGroupFiles('abc__raum101', {'raum101'})
+    assert not (linbodir / 'start.conf.abc__raum101').exists()
+    assert not list(linbodir.glob('*.migrating'))
+
+
+def test_a_failed_group_edit_is_retried_by_the_next_run(monkeypatch, linbodir):
+    (linbodir / 'start.conf.raum101').write_text(PLAIN_STARTCONF)
+    real_set = import_devices.setGlobalStartconfOption
+    monkeypatch.setattr(import_devices, 'setGlobalStartconfOption', lambda *a: False)
+    import_devices.migrateLegacyGroupFiles('abc__raum101', {'raum101'})
+    assert not (linbodir / 'start.conf.abc__raum101').exists()
+    monkeypatch.setattr(import_devices, 'setGlobalStartconfOption', real_set)
+    import_devices.migrateLegacyGroupFiles('abc__raum101', {'raum101'})
+    assert 'Group = abc__raum101\n' in (linbodir / 'start.conf.abc__raum101').read_text()
+
+
+def test_a_managed_grub_cfg_is_not_copied(monkeypatch, linbodir):
+    grub_dir = linbodir / 'boot' / 'grub'
+    (linbodir / 'start.conf.raum101').write_text(PLAIN_STARTCONF)
+    (grub_dir / 'raum101.cfg').write_text(MANAGED + 'menuentry old {}\n')
+    monkeypatch.setattr(environment, 'MANAGEDSTR', MANAGED.strip())
+    import_devices.migrateLegacyGroupFiles('abc__raum101', {'raum101'})
+    assert not (grub_dir / 'abc__raum101.cfg').exists()
+
+
+def test_a_second_run_does_not_touch_an_existing_qualified_start_conf(monkeypatch, linbodir):
+    (linbodir / 'start.conf.raum101').write_text(PLAIN_STARTCONF)
+    (linbodir / 'start.conf.abc__raum101').write_text('[LINBO]\nGroup = abc__raum101\nCache = /dev/sdz9\n')
+    import_devices.migrateLegacyGroupFiles('abc__raum101', {'raum101'})
+    assert 'sdz9' in (linbodir / 'start.conf.abc__raum101').read_text()

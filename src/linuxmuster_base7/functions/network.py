@@ -3,9 +3,7 @@
 # Filename     : network.py
 # Description  : Subnet/device CSV parsing, IP/hostname/MAC validation and
 #                network interface helpers
-# Signed-off by: thomas@linuxmuster.net
-# Assisted by  : Claude
-# Date         : 20260921
+# Date         : 20261116
 #
 
 import csv
@@ -18,6 +16,8 @@ import sys
 sys.path.insert(0, '/usr/lib/linuxmuster')
 import environment
 import netifaces
+
+from .linbo import LINBO_GROUP_SEPARATOR
 
 
 # test if ip matches subnet
@@ -111,7 +111,9 @@ def validateDeviceRow(row, school='default-school'):
     Validate and parse a device row from devices.csv.
 
     Extracts device fields, applies hostname transformation for non-default
-    schools, and validates hostname, MAC address, and IP address.
+    schools, and validates group, hostname, MAC address, and IP address.
+    A group containing LINBO_GROUP_SEPARATOR ('__') is invalid, because it
+    separates school and group in the school-qualified LINBO group id.
 
     Args:
         row: CSV row as list of fields
@@ -135,6 +137,11 @@ def validateDeviceRow(row, school='default-school'):
         mac = row[3]
         ip = row[4]
         pxe = row[10]
+
+        # LINBO_GROUP_SEPARATOR is reserved for the school-qualified LINBO
+        # group id (<school>__<group>), so a group must not contain it
+        if LINBO_GROUP_SEPARATOR in group:
+            return False, None
 
         # Validate hostname and MAC address
         if not isValidHostname(hostname) or not isValidMac(mac):

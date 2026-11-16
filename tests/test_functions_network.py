@@ -3,9 +3,7 @@
 # Filename     : test_functions_network.py
 # Description  : Regression tests for isValidHostIpv4()'s subnet-aware
 #                validation.
-# Signed-off by: thomas@linuxmuster.net
-# Assisted by  : Claude
-# Date         : 20260921
+# Date         : 20261116
 #
 """
 Regression tests for linuxmuster_base7.functions.network.isValidHostIpv4().
@@ -23,7 +21,7 @@ import pytest
 
 pytest.importorskip('environment', reason='requires linuxmuster-common (environment.py) on sys.path')
 
-from linuxmuster_base7.functions import isValidHostIpv4  # noqa: E402
+from linuxmuster_base7.functions import isValidHostIpv4, validateDeviceRow  # noqa: E402
 
 
 @pytest.mark.parametrize('ip, expected', [
@@ -77,3 +75,34 @@ def test_subnet_aware_network_broadcast_check(ip, subnet, expected):
 
 def test_malformed_subnet_rejects():
     assert isValidHostIpv4('10.0.0.1', 'not-a-subnet') is False
+
+
+def _device_row(group='raum101', hostname='pc01', mac='AA:BB:CC:DD:EE:01', ip='10.0.0.11'):
+    return ['room', hostname, group, mac, ip, '', '', '', '', '', '1']
+
+
+@pytest.mark.parametrize('school', ['default-school', 'abc'])
+def test_valid_group_is_accepted(school):
+    is_valid, device = validateDeviceRow(_device_row('raum101'), school)
+    assert is_valid is True
+    assert device['group'] == 'raum101'
+
+
+@pytest.mark.parametrize('group', ['win11_edu', 'raum_101', '_raum101', 'raum101_', 'win11-efi_2'])
+@pytest.mark.parametrize('school', ['default-school', 'abc'])
+def test_group_with_single_underscore_is_accepted(group, school):
+    is_valid, device = validateDeviceRow(_device_row(group), school)
+    assert is_valid is True
+    assert device['group'] == group
+
+
+@pytest.mark.parametrize('group', ['abc__raum101', 'raum__101', '__raum101', 'raum101__', 'a___b'])
+@pytest.mark.parametrize('school', ['default-school', 'abc'])
+def test_group_with_separator_is_rejected(group, school):
+    assert validateDeviceRow(_device_row(group), school) == (False, None)
+
+
+def test_rejected_group_does_not_modify_the_row():
+    row = _device_row('abc__raum101')
+    validateDeviceRow(row, 'abc')
+    assert row == _device_row('abc__raum101')

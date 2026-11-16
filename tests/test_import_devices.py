@@ -145,3 +145,115 @@ def test_startconf_grubcfg_and_links(monkeypatch, linbodir, school, group_id, ho
         (linbodir / ('start.conf.' + group_id)).resolve()
     assert (grub_dir / 'hostcfg' / (host + '.cfg')).resolve() == \
         (grub_dir / (group_id + '.cfg')).resolve()
+
+
+# --- migration of existing installations (issue #206) ---------------------
+
+PLAIN_STARTCONF = '[LINBO]\nServer = 10.0.0.1\nCache = /dev/sda4\nGroup=raum101\n'
+MANAGED = '# managed by linuxmuster\n'
+
+
+def writeLegacyLinks(linbodir, school, groups):
+    links_dir = linbodir / 'boot' / 'links'
+    links_dir.mkdir(parents=True, exist_ok=True)
+    rows = ''.join('start.conf.%s;%s/start.conf-10.0.0.%d\r\n' % (g, linbodir, i + 2)
+                   for i, g in enumerate(groups))
+    (links_dir / (school + '.csv')).write_text(rows)
+
+
+def runImport(monkeypatch, linbodir, school, rows=None):
+    stubDevicesArray(monkeypatch, rows or LINK_ROWS)
+    versionfile = linbodir / 'linbo-version'
+    versionfile.write_text('LINBO 4.3.12: Codename\n')
+    monkeypatch.setattr(environment, 'LINBOVERFILE', str(versionfile))
+    monkeypatch.setattr(environment, 'MANAGEDSTR', MANAGED.strip())
+    import_devices.generateGrubConfigsForGroups(school)
+
+
+def test_migration_copies_start_conf_and_sets_group(monkeypatch, linbodir):
+    (linbodir / 'start.conf.raum101').write_text(PLAIN_STARTCONF)
+    writeLegacyLinks(linbodir, 'abc', ['raum101'])
+    runImport(monkeypatch, linbodir, 'abc')
+    migrated = (linbodir / 'start.conf.abc__raum101').read_text()
+    assert migrated.count('Group') == 1
+    assert 'Group = abc__raum101\n' in migrated
+    assert 'Cache = /dev/sda4\n' in migrated
+    # the plain file stays behind untouched
+    assert (linbodir / 'start.conf.raum101').read_text() == PLAIN_STARTCONF
+
+
+def test_migration_only_for_groups_the_school_used_before(monkeypatch, linbodir):
+    (linbodir / 'start.conf.raum101').write_text(PLAIN_STARTCONF)
+    (linbodir / 'start.conf.win11-efi_2').write_text(PLAIN_STARTCONF.replace('raum101', 'win11-efi_2'))
+    writeLegacyLinks(linbodir, 'abc', ['raum101'])
+    runImport(monkeypatch, linbodir, 'abc')
+    # win11-efi_2 is new for school abc: it gets the unconfigured template,
+    # not the copy of a plain group another school may own
+    new_group = (linbodir / 'start.conf.abc__win11-efi_2').read_text()
+    assert new_group == (linbodir / 'start.conf').read_text()
+
+
+def test_migration_without_legacy_links_uses_the_template(monkeypatch, linbodir):
+    (linbodir / 'start.conf.raum101').write_text(PLAIN_STARTCONF)
+    runImport(monkeypatch, linbodir, 'abc')
+    assert (linbodir / 'start.conf.abc__raum101').read_text() == \
+        (linbodir / 'start.conf').read_text()
+
+
+def test_migration_never_overwrites_a_qualified_file(monkeypatch, linbodir):
+    (linbodir / 'start.conf.raum101').write_text(PLAIN_STARTCONF)
+    (linbodir / 'start.conf.abc__raum101').write_text('[LINBO]\nGroup = abc__raum101\nCache = /dev/sdb1\n')
+    writeLegacyLinks(linbodir, 'abc', ['raum101'])
+    runImport(monkeypatch, linbodir, 'abc')
+    assert 'Cache = /dev/sdb1\n' in (linbodir / 'start.conf.abc__raum101').read_text()
+
+
+def test_migration_is_idempotent(monkeypatch, linbodir):
+    (linbodir / 'start.conf.raum101').write_text(PLAIN_STARTCONF)
+    writeLegacyLinks(linbodir, 'abc', ['raum101'])
+    runImport(monkeypatch, linbodir, 'abc')
+    first = (linbodir / 'start.conf.abc__raum101').read_text()
+    # the second run reads the csv the first one wrote (qualified names)
+    (linbodir / 'start.conf.raum101').write_text(PLAIN_STARTCONF + 'Autostart = yes\n')
+    runImport(monkeypatch, linbodir, 'abc')
+    assert (linbodir / 'start.conf.abc__raum101').read_text() == first
+
+
+def test_migration_copies_an_unmanaged_grub_cfg(monkeypatch, linbodir):
+    grub_dir = linbodir / 'boot' / 'grub'
+    (linbodir / 'start.conf.raum101').write_text(PLAIN_STARTCONF)
+    (grub_dir / 'raum101.cfg').write_text('# hand written\nmenuentry x {}\n')
+    writeLegacyLinks(linbodir, 'abc', ['raum101'])
+    runImport(monkeypatch, linbodir, 'abc')
+    assert (grub_dir / 'abc__raum101.cfg').read_text() == '# hand written\nmenuentry x {}\n'
+
+
+def test_migration_does_not_copy_a_managed_grub_cfg(monkeypatch, linbodir):
+    grub_dir = linbodir / 'boot' / 'grub'
+    # no Cache in the start.conf: the cfg is the forced netboot template
+    (linbodir / 'start.conf.raum101').write_text('[LINBO]\nServer = 10.0.0.1\nGroup=raum101\n')
+    (grub_dir / 'raum101.cfg').write_text(MANAGED + 'menuentry old {}\n')
+    writeLegacyLinks(linbodir, 'abc', ['raum101'])
+    runImport(monkeypatch, linbodir, 'abc')
+    # regenerated instead of copied
+    assert (grub_dir / 'abc__raum101.cfg').read_text() == '# forced netboot\n'
+
+
+def test_default_school_is_not_migrated(monkeypatch, linbodir):
+    (linbodir / 'start.conf.raum101').write_text(PLAIN_STARTCONF)
+    writeLegacyLinks(linbodir, 'default-school', ['raum101'])
+    runImport(monkeypatch, linbodir, 'default-school')
+    assert (linbodir / 'start.conf.raum101').read_text() == PLAIN_STARTCONF
+    assert not list(linbodir.glob('start.conf.*__*'))
+
+
+def test_read_legacy_link_groups_ignores_qualified_and_foreign_rows(linbodir):
+    links_dir = linbodir / 'boot' / 'links'
+    links_dir.mkdir(parents=True)
+    (links_dir / 'abc.csv').write_text(
+        'start.conf.raum101;/srv/linbo/start.conf-10.0.0.2\r\n'
+        '../raum101.cfg;/srv/linbo/boot/grub/hostcfg/abc-pc01.cfg\r\n'
+        'start.conf.abc__win11;/srv/linbo/start.conf-10.0.0.3\r\n')
+    assert import_devices.readLegacyLinkGroups('abc') == {'raum101'}
+    assert import_devices.readLegacyLinkGroups('default-school') == set()
+    assert import_devices.readLegacyLinkGroups('other') == set()

@@ -23,7 +23,8 @@ from pathlib import Path
 
 from linuxmuster_base7.functions import getDevicesArray, getGrubOstype, getGrubPart, getStartconfOsValues, \
     getStartconfOption, getStartconfPartnr, getStartconfPartlabel, getSubnetArray, \
-    getLinboGroupId, getLinboVersion, printScript, readTextfile, writeTextfile
+    getLinboGroupId, splitLinboGroupId, LINBO_GROUP_SEPARATOR, setGlobalStartconfOption, \
+    getLinboVersion, printScript, readTextfile, writeTextfile
 
 # Setup logging
 logfile = environment.LOGDIR + '/import-devices.log'
@@ -248,8 +249,68 @@ def doGrubCfg(startconf, group, kopts):
     return msg
 
 
+def readLegacyLinkGroups(school):
+    """Return the plain groups the links csv of a school referenced so far.
+
+    Must be called before doPxeGroupsBySchool() rewrites the csv. The csv of
+    an installation that predates school-qualified group ids names plain
+    groups ('start.conf.<group>'); those are the groups a school may inherit
+    the files of. default-school keeps its plain names and never migrates.
+
+    Args:
+        school: School name
+
+    Returns:
+        Set of plain group names, empty for default-school or without csv
+    """
+    legacy_groups = set()
+    if school == 'default-school':
+        return legacy_groups
+    links_file = environment.LINBODIR + '/boot/links/' + school + '.csv'
+    if not os.path.isfile(links_file):
+        return legacy_groups
+    prefix = 'start.conf.'
+    with open(links_file, newline='') as csvfile:
+        for row in csv.reader(csvfile, delimiter=';', quotechar='"'):
+            if row and row[0].startswith(prefix):
+                group = row[0][len(prefix):]
+                if group and LINBO_GROUP_SEPARATOR not in group:
+                    legacy_groups.add(group)
+    return legacy_groups
+
+
+def migrateLegacyGroupFiles(group_id, legacy_groups):
+    """Give a school's qualified group the files of its former plain group.
+
+    Before school-qualified group ids every school shared start.conf.<group>
+    and <group>.cfg. For a group the school used before, the qualified start.conf
+    is a copy of the plain one with its 'Group =' line set to the qualified id
+    (clients read it as HOSTGROUP in offline mode), and an unmanaged grub cfg is
+    copied as well (managed ones are regenerated anyway). Existing qualified
+    files are never overwritten, so repeated imports change nothing.
+
+    Args:
+        group_id: LINBO group id (see getLinboGroupId())
+        legacy_groups: Plain groups the school used before, see readLegacyLinkGroups()
+    """
+    school, group = splitLinboGroupId(group_id)
+    if school == 'default-school' or group not in legacy_groups:
+        return
+    old_startconf = environment.LINBODIR + '/start.conf.' + group
+    new_startconf = environment.LINBODIR + '/start.conf.' + group_id
+    if os.path.isfile(old_startconf) and not os.path.exists(new_startconf):
+        shutil.copy2(old_startconf, new_startconf)
+        setGlobalStartconfOption(new_startconf, 'Group', group_id)
+    old_grubcfg = environment.LINBOGRUBDIR + '/' + group + '.cfg'
+    new_grubcfg = environment.LINBOGRUBDIR + '/' + group_id + '.cfg'
+    if os.path.isfile(old_grubcfg) and not os.path.exists(new_grubcfg):
+        rc, content = readTextfile(old_grubcfg)
+        if rc and environment.MANAGEDSTR not in content:
+            shutil.copy2(old_grubcfg, new_grubcfg)
+
+
 # write linbo start configuration file
-def doLinboStartconf(group):
+def doLinboStartconf(group, legacy_groups=frozenset()):
     """Process LINBO start.conf and GRUB configuration for a device group.
 
     Ensures start.conf exists for the group (creates unconfigured template if missing),
@@ -257,7 +318,10 @@ def doLinboStartconf(group):
 
     Args:
         group: LINBO group id (see getLinboGroupId())
+        legacy_groups: Plain groups the school used before school-qualified
+            ids, whose files are carried over (see migrateLegacyGroupFiles())
     """
+    migrateLegacyGroupFiles(group, legacy_groups)
     startconf = environment.LINBODIR + '/start.conf.' + group
     # provide unconfigured start.conf if there is none for this group
     if os.path.isfile(startconf):
@@ -598,6 +662,9 @@ def generateGrubConfigsForGroups(school):
     printScript(msg)
     logToFile(msg)
 
+    # read what the school linked before, doPxeGroupsBySchool() rewrites it
+    legacy_groups = readLegacyLinkGroups(school)
+
     # Create symlinks from devices to their group configurations
     pxe_groups = doPxeGroupsBySchool(school=school)
 
@@ -613,7 +680,7 @@ def generateGrubConfigsForGroups(school):
         *[' ', 'linbo start.conf', 'grub cfg']))
     printScript("  {: <15}+{: <20}+{: <20}".format(*['-'*16, '-'*22, '-'*21]))
     for group in pxe_groups:
-        doLinboStartconf(group)
+        doLinboStartconf(group, legacy_groups)
 
 
 def runPostImportHooks(school):

@@ -84,3 +84,23 @@ def test_no_collision_between_schools():
 
 def test_separator_is_a_double_underscore():
     assert LINBO_GROUP_SEPARATOR == '__'
+
+
+@pytest.mark.parametrize('line', ['Group=raum101', 'Group = raum101', 'Group  =  raum101', 'group =raum101'])
+def test_set_group_option_replaces_any_spacing(tmp_path, line):
+    from linuxmuster_base7.functions import setGlobalStartconfOption
+    startconf = tmp_path / 'start.conf'
+    startconf.write_text('[LINBO]\nServer = 10.0.0.1\n' + line + '\nCache = /dev/sda4\n')
+    assert setGlobalStartconfOption(str(startconf), 'Group', 'abc__raum101')
+    content = startconf.read_text()
+    assert content.lower().count('group') == 1
+    assert 'Group = abc__raum101\n' in content
+    assert 'Server = 10.0.0.1\n' in content and 'Cache = /dev/sda4\n' in content
+
+
+def test_set_group_option_inserts_a_missing_option(tmp_path):
+    from linuxmuster_base7.functions import setGlobalStartconfOption
+    startconf = tmp_path / 'start.conf'
+    startconf.write_text('[LINBO]\nServer = 10.0.0.1\n')
+    assert setGlobalStartconfOption(str(startconf), 'Group', 'abc__raum101')
+    assert startconf.read_text() == '[LINBO]\nGroup = abc__raum101\nServer = 10.0.0.1\n'

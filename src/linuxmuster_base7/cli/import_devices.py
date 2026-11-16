@@ -4,7 +4,7 @@
 # Description  : Import devices from devices.csv into DHCP, DNS and LINBO/GRUB config
 # Signed-off by: thomas@linuxmuster.net
 # Assisted by  : Claude
-# Date         : 20261001
+# Date         : 20261116
 #
 
 import configparser

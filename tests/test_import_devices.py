@@ -6,13 +6,13 @@
 #                cfg file names.
 # Signed-off by: tom.lehmann@netzint.de
 # Assisted by  : Claude
-# Date         : 20260928
+# Date         : 20261116
 #
 """
 Tests for the use of getLinboGroupId() in linuxmuster_base7.cli.import_devices.
 
 default-school output must stay byte-for-byte identical (plain group names),
-every other school gets the qualified id '<school>+<group>' in the DHCP
+every other school gets the qualified id '<school>__<group>' in the DHCP
 extensions-path/nis-domain options, the start.conf/grub cfg link sources and
 the start.conf.<id>/<id>.cfg files (see issue #206). getDevicesArray() is
 stubbed with the rows it would return, and the LINBO directories of the
@@ -94,8 +94,8 @@ def test_dhcp_other_school_qualified(monkeypatch):
         '  option host-name "abc-pc01";\n'
         '  hardware ethernet 00:11:22:33:44:56;\n'
         '  fixed-address 10.0.0.2;\n'
-        '  option extensions-path "abc+raum101";\n'
-        '  option nis-domain "abc+raum101";\n'
+        '  option extensions-path "abc__raum101";\n'
+        '  option nis-domain "abc__raum101";\n'
         '}\n'
     )
 
@@ -117,20 +117,20 @@ def test_links_default_school_unchanged(monkeypatch, linbodir):
 def test_links_other_school_qualified(monkeypatch, linbodir):
     stubDevicesArray(monkeypatch, LINK_ROWS)
     pxe_groups = import_devices.doPxeGroupsBySchool(school='abc')
-    assert pxe_groups == ['abc+raum101', 'abc+win11-efi_2']
+    assert pxe_groups == ['abc__raum101', 'abc__win11-efi_2']
     links = (linbodir / 'boot' / 'links' / 'abc.csv').read_bytes().decode()
     grub_dir = environment.LINBOGRUBDIR
     assert links == (
-        f'start.conf.abc+raum101;{linbodir}/start.conf-10.0.0.2\r\n'
-        f'../abc+raum101.cfg;{grub_dir}/hostcfg/abc-pc01.cfg\r\n'
-        f'start.conf.abc+win11-efi_2;{linbodir}/start.conf-aa:11:22:33:44:58\r\n'
-        f'../abc+win11-efi_2.cfg;{grub_dir}/hostcfg/abc-pc02.cfg\r\n'
+        f'start.conf.abc__raum101;{linbodir}/start.conf-10.0.0.2\r\n'
+        f'../abc__raum101.cfg;{grub_dir}/hostcfg/abc-pc01.cfg\r\n'
+        f'start.conf.abc__win11-efi_2;{linbodir}/start.conf-aa:11:22:33:44:58\r\n'
+        f'../abc__win11-efi_2.cfg;{grub_dir}/hostcfg/abc-pc02.cfg\r\n'
     )
 
 
 @pytest.mark.parametrize('school, group_id, host', [
     ('default-school', 'raum101', 'pc01'),
-    ('abc', 'abc+raum101', 'abc-pc01'),
+    ('abc', 'abc__raum101', 'abc-pc01'),
 ])
 def test_startconf_grubcfg_and_links(monkeypatch, linbodir, school, group_id, host):
     stubDevicesArray(monkeypatch, LINK_ROWS)

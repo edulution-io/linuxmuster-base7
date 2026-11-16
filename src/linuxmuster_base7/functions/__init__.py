@@ -26,7 +26,7 @@ from .samba import getBaseDN, adSearch, isDynamicIpDevice, sambaTool
 from .linbo import getGrubPart, getGrubOstype, readStartconf, \
     getStartconfOption, getStartconfPartlabel, getStartconfPartnr, \
     setGlobalStartconfOption, getStartconfOsValues, getLinboGroupId, \
-    splitLinboGroupId, getLinboVersion
+    splitLinboGroupId, getLinboVersion, LINBO_GROUP_SEPARATOR
 from .certs import encodeCertToBase64, renewCaCertificate, \
     signCertificateWithCa, createCertificateChain, createCnfFromTemplate, \
     createServerCert, buildCaSubjectAndSan, writeCaCertificate
@@ -55,7 +55,7 @@ __all__ = [
     'getGrubPart', 'getGrubOstype', 'readStartconf', 'getStartconfOption',
     'getStartconfPartlabel', 'getStartconfPartnr', 'setGlobalStartconfOption',
     'getStartconfOsValues', 'getLinboGroupId', 'splitLinboGroupId',
-    'getLinboVersion',
+    'getLinboVersion', 'LINBO_GROUP_SEPARATOR',
     # certs
     'encodeCertToBase64', 'renewCaCertificate', 'signCertificateWithCa',
     'createCertificateChain', 'createCnfFromTemplate', 'createServerCert',

@@ -457,3 +457,12 @@ When working on this codebase:
 - **Document security-sensitive operations** (passwords, file permissions, SSH keys)
 - **Ask for clarification** if uncertain about intended behavior
 - **Examples directory** (`src/examples/`) is for reference only, not production code
+
+## Commits and file headers (edulution-io fork)
+
+In the edulution-io fork neither a commit nor a file needs a sign-off:
+
+- Commits carry no `Signed-off-by:` trailer.
+- New files carry no `# Signed-off by` or `# Assisted by` lines in their header. Headers that already have them stay as they are.
+
+Upstream linuxmuster still asks for both, so a change meant for upstream gets them added when it is sent there.

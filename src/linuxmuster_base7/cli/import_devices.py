@@ -315,7 +315,9 @@ def migrateLegacyGroupFiles(group_id, legacy_groups):
     if os.path.isfile(old_grubcfg) and not os.path.exists(new_grubcfg):
         rc, content = readTextfile(old_grubcfg)
         if rc and environment.MANAGEDSTR not in content:
-            shutil.copy2(old_grubcfg, new_grubcfg)
+            pending_grubcfg = new_grubcfg + '.migrating'
+            shutil.copy2(old_grubcfg, pending_grubcfg)
+            os.replace(pending_grubcfg, new_grubcfg)
 
 
 # write linbo start configuration file
@@ -675,7 +677,9 @@ def generateGrubConfigsForGroups(school):
     legacy_groups = readLegacyLinkGroups(school)
     # carry the files over before the csv is rewritten, so an interrupted run
     # still finds the school's legacy groups in the old csv on the next one
-    for legacy_group in sorted(legacy_groups):
+    pxe_device_groups = {device[1] for device in getDevicesArray(
+        fieldnrs=DEVICE_FIELDS_LINKS, subnet='all', pxeflag='1,2,3', school=school)}
+    for legacy_group in sorted(legacy_groups & pxe_device_groups):
         migrateLegacyGroupFiles(getLinboGroupId(school, legacy_group), legacy_groups)
 
     # Create symlinks from devices to their group configurations

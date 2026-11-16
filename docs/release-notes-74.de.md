@@ -64,9 +64,9 @@ Gruppen übernommen:
   linuxmuster-linbo7, dann linuxmuster-base7, danach linuxmuster-tools und
   linuxmuster-api. Ein Client, dessen LINBO-Server noch nicht aktualisiert ist,
   findet die Konfiguration der neuen Gruppe im Offline-Betrieb nicht.
-- Wird der Import zwischen der Umstellung der Zuordnung und dem Kopieren der
-  Dateien abgebrochen, erkennt der nächste Lauf die bisherigen Gruppen nicht
-  mehr. In dem Fall die Datei `start.conf.<gruppe>` von Hand nach
+- Übernommen wird nur, solange `boot/links/<schule>.csv` die bisherigen Gruppen
+  noch auflistet und die Gruppe in `devices.csv` Geräte hat. Eine Gruppe ohne
+  Geräte bleibt unverändert; ihre Datei lässt sich bei Bedarf von Hand nach
   `start.conf.<schule>__<gruppe>` kopieren.
 
 ## Upgrade-Hinweis

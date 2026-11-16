@@ -18,6 +18,7 @@ environment module are pointed to tmp_path.
 """
 
 import io
+import os
 import shutil
 
 import pytest
@@ -214,8 +215,9 @@ def test_migration_is_idempotent(monkeypatch, linbodir):
     writeLegacyLinks(linbodir, 'abc', ['raum101'])
     runImport(monkeypatch, linbodir, 'abc')
     first = (linbodir / 'start.conf.abc__raum101').read_text()
-    # the second run reads the csv the first one wrote (qualified names)
+    # the old csv is back, as after a restore: the qualified file is still not overwritten
     (linbodir / 'start.conf.raum101').write_text(PLAIN_STARTCONF + 'Autostart = yes\n')
+    writeLegacyLinks(linbodir, 'abc', ['raum101'])
     runImport(monkeypatch, linbodir, 'abc')
     assert (linbodir / 'start.conf.abc__raum101').read_text() == first
 
@@ -310,3 +312,29 @@ def test_a_second_run_does_not_touch_an_existing_qualified_start_conf(monkeypatc
     (linbodir / 'start.conf.abc__raum101').write_text('[LINBO]\nGroup = abc__raum101\nCache = /dev/sdz9\n')
     import_devices.migrateLegacyGroupFiles('abc__raum101', {'raum101'})
     assert 'sdz9' in (linbodir / 'start.conf.abc__raum101').read_text()
+
+
+def test_a_legacy_group_without_devices_is_not_migrated(monkeypatch, linbodir):
+    (linbodir / 'start.conf.raum101').write_text(PLAIN_STARTCONF)
+    (linbodir / 'start.conf.lab').write_text(PLAIN_STARTCONF)
+    writeLegacyLinks(linbodir, 'abc', ['raum101', 'lab'])
+    runImport(monkeypatch, linbodir, 'abc')
+    assert (linbodir / 'start.conf.abc__raum101').exists()
+    assert not (linbodir / 'start.conf.abc__lab').exists()
+
+
+def test_a_failed_grub_cfg_copy_leaves_no_partial_file(monkeypatch, linbodir):
+    grub_dir = linbodir / 'boot' / 'grub'
+    (linbodir / 'start.conf.raum101').write_text(PLAIN_STARTCONF)
+    (grub_dir / 'raum101.cfg').write_text('# hand written\n')
+    real_replace = os.replace
+
+    def failing_replace(src, dst):
+        if str(dst).endswith('.cfg'):
+            raise OSError('interrupted')
+        return real_replace(src, dst)
+
+    monkeypatch.setattr(import_devices.os, 'replace', failing_replace)
+    with pytest.raises(OSError):
+        import_devices.migrateLegacyGroupFiles('abc__raum101', {'raum101'})
+    assert not (grub_dir / 'abc__raum101.cfg').exists()

@@ -1,0 +1,11 @@
+# Only GitHub Actions: the runtime dependencies ship through debian/control,
+# which Dependabot does not read, so pip version updates would only add noise.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ["*"]

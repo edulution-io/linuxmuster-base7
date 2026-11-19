@@ -1,0 +1,30 @@
+name: Checks
+
+# Package build, lintian, lint and (where available) unit tests on every pull
+# request. The jobs are shared with the other linuxmuster repositories, see
+# .github/workflows/lmn-checks.yml in edulution-io/edulution-package-server.
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  checks:
+    uses: edulution-io/edulution-package-server/.github/workflows/lmn-checks.yml@edulution/lmn-checks
+    with:
+      build-image: ghcr.io/linuxmuster/lmndev-runner:latest
+      build-command: /opt/lmndev/build/linuxmuster-base7.sh
+      # Runtime dependencies come from package.edulution.io, so the tests run
+      # against the same packages as a server.
+      test-packages: >-
+        linuxmuster-common python3-netifaces python3-ipy python3-netaddr python3-ldap3 python3-paramiko python3-requests python3-bs4 python3-lxml python3-bcrypt python3-dialog python3-apt python3-setproctitle
+      test-command: PYTHONPATH=src python3 -m pytest -q -p no:cacheprovider tests

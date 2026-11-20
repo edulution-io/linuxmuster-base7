@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   checks:
-    uses: edulution-io/edulution-package-server/.github/workflows/lmn-checks.yml@edulution/lmn-checks
+    uses: edulution-io/edulution-package-server/.github/workflows/lmn-checks.yml@main
     with:
       build-image: ghcr.io/linuxmuster/lmndev-runner:latest
       build-command: /opt/lmndev/build/linuxmuster-base7.sh

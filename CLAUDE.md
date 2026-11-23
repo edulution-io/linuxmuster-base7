@@ -4,7 +4,7 @@
 
 **linuxmuster-base7** is the core Python library and management toolset for linuxmuster.net 7.x, an open-source school network solution. The project provides essential infrastructure for setting up and managing school server environments, including device management, network configuration, and firewall integration.
 
-- **Version**: 7.3.29
+- **Version**: set only in `debian/changelog`; `setup.py` derives the Python package version from it
 - **License**: GPL-3.0-or-later
 - **Primary Maintainer**: thomas@linuxmuster.net
 - **Organization**: Linuxmuster.net e.V.

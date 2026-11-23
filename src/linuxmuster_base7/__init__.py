@@ -8,7 +8,12 @@ Authors: thomas@linuxmuster.net
 License: GPL-3.0
 """
 
-__version__ = "7.4.4"
+import importlib.metadata
+
+try:
+    __version__ = importlib.metadata.version("linuxmuster-base7")
+except importlib.metadata.PackageNotFoundError:  # source checkout that was never installed
+    __version__ = "0+unknown"
 __author__ = "thomas@linuxmuster.net"
 
 # Make commonly used functions available at package level

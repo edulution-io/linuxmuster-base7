@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "linuxmuster-base7"
-version = "7.3.29"
+dynamic = ["version"]  # from debian/changelog, see setup.py
 description = "Core Python library and tools for linuxmuster.net 7.x"
 readme = "README.md"
 requires-python = ">=3.8"

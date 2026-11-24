@@ -3,8 +3,6 @@
 # Filename     : test_functions_linbo.py
 # Description  : Tests for the LINBO group id helper pair
 #                getLinboGroupId()/splitLinboGroupId().
-# Signed-off by: tom.lehmann@netzint.de
-# Assisted by  : Claude
 # Date         : 20261116
 #
 """

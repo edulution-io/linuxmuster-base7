@@ -4,8 +4,6 @@
 # Description  : Tests for the LINBO group ids that import_devices.py writes
 #                into the DHCP config, the link csv and the start.conf/grub
 #                cfg file names.
-# Signed-off by: tom.lehmann@netzint.de
-# Assisted by  : Claude
 # Date         : 20261116
 #
 """

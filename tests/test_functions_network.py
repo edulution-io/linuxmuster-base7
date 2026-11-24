@@ -5,7 +5,7 @@
 #                validation.
 # Signed-off by: thomas@linuxmuster.net
 # Assisted by  : Claude
-# Date         : 20261116
+# Date         : 20261124
 #
 """
 Regression tests for linuxmuster_base7.functions.network.isValidHostIpv4().
@@ -21,7 +21,7 @@ addresses via netaddr and also rejects addresses outside the subnet.
 
 import pytest
 
-pytest.importorskip('environment', reason='requires linuxmuster-common (environment.py) on sys.path')
+environment = pytest.importorskip('environment', reason='requires linuxmuster-common (environment.py) on sys.path')
 
 from linuxmuster_base7.functions import isValidHostIpv4, validateDeviceRow  # noqa: E402
 
@@ -108,3 +108,30 @@ def test_rejected_group_does_not_modify_the_row():
     row = _device_row('abc__raum101')
     validateDeviceRow(row, 'abc')
     assert row == _device_row('abc__raum101')
+
+
+@pytest.fixture
+def logdir(tmp_path, monkeypatch):
+    monkeypatch.setattr(environment, 'LOGDIR', str(tmp_path), raising=False)
+    return tmp_path
+
+
+@pytest.mark.parametrize('school', ['default-school', 'abc'])
+def test_rejected_group_is_logged(logdir, school):
+    validateDeviceRow(_device_row('raum__101', hostname='pc01'), school)
+    log = (logdir / 'import-devices.log').read_text()
+    host = 'pc01' if school == 'default-school' else 'abc-pc01'
+    assert 'WARNING' in log
+    assert f'Skipping device {host}' in log
+    assert "group 'raum__101'" in log
+    assert f'school {school}' in log
+
+
+def test_valid_group_is_not_logged(logdir):
+    validateDeviceRow(_device_row('raum101'))
+    assert not (logdir / 'import-devices.log').exists()
+
+
+def test_unwritable_log_does_not_break_the_rejection(monkeypatch):
+    monkeypatch.setattr(environment, 'LOGDIR', '/nonexistent/dir', raising=False)
+    assert validateDeviceRow(_device_row('raum__101')) == (False, None)

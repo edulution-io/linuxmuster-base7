@@ -5,10 +5,11 @@
 #                network interface helpers
 # Signed-off by: thomas@linuxmuster.net
 # Assisted by  : Claude
-# Date         : 20261116
+# Date         : 20261124
 #
 
 import csv
+import datetime
 import re
 import socket
 from contextlib import closing
@@ -108,6 +109,22 @@ def readDevicesCsv(school='default-school'):
     return rows
 
 
+def logDeviceWarning(message):
+    """
+    Append a warning to import-devices.log. Never raises, a missing log
+    must not break reading devices.csv.
+
+    Args:
+        message: Text of the warning
+    """
+    try:
+        timestamp = str(datetime.datetime.now()).split('.')[0]
+        with open(environment.LOGDIR + '/import-devices.log', 'a') as log:
+            log.write(f'[{timestamp}] WARNING: {message}\n')
+    except Exception:
+        pass
+
+
 def validateDeviceRow(row, school='default-school'):
     """
     Validate and parse a device row from devices.csv.
@@ -143,6 +160,12 @@ def validateDeviceRow(row, school='default-school'):
         # LINBO_GROUP_SEPARATOR is reserved for the school-qualified LINBO
         # group id (<school>__<group>), so a group must not contain it
         if LINBO_GROUP_SEPARATOR in group:
+            # the device loses its DHCP reservation as well as LINBO, so
+            # leave a trace in the log of import-devices
+            logDeviceWarning(f"Skipping device {hostname}: group '{group}' contains "
+                             f"'{LINBO_GROUP_SEPARATOR}', which is reserved for "
+                             f"school-qualified LINBO group ids "
+                             f"(school {school}).")
             return False, None
 
         # Validate hostname and MAC address

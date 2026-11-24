@@ -37,9 +37,9 @@ jobs:
           DIST=$(dpkg-parsechangelog -S Distribution)
           NUM="${DIST#lmn}"
           if [ "${NUM:-0}" -ge 74 ] 2>/dev/null; then
-            echo "image=ghcr.io/linuxmuster/lmndev-runner:latest" >> "$GITHUB_OUTPUT"
+            echo "image=ghcr.io/edulution-io/lmndev-runner:latest" >> "$GITHUB_OUTPUT"
           else
-            echo "image=ghcr.io/linuxmuster/lmndev-runner:24.04" >> "$GITHUB_OUTPUT"
+            echo "image=ghcr.io/edulution-io/lmndev-runner:24.04" >> "$GITHUB_OUTPUT"
           fi
 
   build:

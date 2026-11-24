@@ -4,7 +4,7 @@
 # Description  : Import devices from devices.csv into DHCP, DNS and LINBO/GRUB config
 # Signed-off by: thomas@linuxmuster.net
 # Assisted by  : Claude
-# Date         : 20261116
+# Date         : 20261124
 #
 
 import configparser
@@ -323,7 +323,7 @@ def migrateLegacyGroupFiles(group_id, legacy_groups):
 
 
 # write linbo start configuration file
-def doLinboStartconf(group, legacy_groups=frozenset()):
+def doLinboStartconf(group):
     """Process LINBO start.conf and GRUB configuration for a device group.
 
     Ensures start.conf exists for the group (creates unconfigured template if missing),
@@ -331,10 +331,7 @@ def doLinboStartconf(group, legacy_groups=frozenset()):
 
     Args:
         group: LINBO group id (see getLinboGroupId())
-        legacy_groups: Plain groups the school used before school-qualified
-            ids, whose files are carried over (see migrateLegacyGroupFiles())
     """
-    migrateLegacyGroupFiles(group, legacy_groups)
     startconf = environment.LINBODIR + '/start.conf.' + group
     # provide unconfigured start.conf if there is none for this group
     if os.path.isfile(startconf):
@@ -699,7 +696,7 @@ def generateGrubConfigsForGroups(school):
         *[' ', 'linbo start.conf', 'grub cfg']))
     printScript("  {: <15}+{: <20}+{: <20}".format(*['-'*16, '-'*22, '-'*21]))
     for group in pxe_groups:
-        doLinboStartconf(group, legacy_groups)
+        doLinboStartconf(group)
 
 
 def runPostImportHooks(school):

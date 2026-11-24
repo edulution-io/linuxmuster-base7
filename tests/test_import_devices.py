@@ -4,7 +4,7 @@
 # Description  : Tests for the LINBO group ids that import_devices.py writes
 #                into the DHCP config, the link csv and the start.conf/grub
 #                cfg file names.
-# Date         : 20261116
+# Date         : 20261124
 #
 """
 Tests for the use of getLinboGroupId() in linuxmuster_base7.cli.import_devices.
@@ -338,3 +338,14 @@ def test_a_failed_grub_cfg_copy_leaves_no_partial_file(monkeypatch, linbodir):
     with pytest.raises(OSError):
         import_devices.migrateLegacyGroupFiles('abc__raum101', {'raum101'})
     assert not (grub_dir / 'abc__raum101.cfg').exists()
+
+
+def test_one_import_migrates_a_group_only_once(monkeypatch, linbodir):
+    (linbodir / 'start.conf.raum101').write_text(PLAIN_STARTCONF)
+    writeLegacyLinks(linbodir, 'abc', ['raum101'])
+    calls = []
+    real_migrate = import_devices.migrateLegacyGroupFiles
+    monkeypatch.setattr(import_devices, 'migrateLegacyGroupFiles',
+                        lambda *args: (calls.append(args[0]), real_migrate(*args))[1])
+    runImport(monkeypatch, linbodir, 'abc')
+    assert calls == ['abc__raum101']

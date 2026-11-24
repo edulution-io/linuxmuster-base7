@@ -21,7 +21,7 @@ jobs:
   checks:
     uses: edulution-io/edulution-package-server/.github/workflows/lmn-checks.yml@main
     with:
-      build-image: ghcr.io/linuxmuster/lmndev-runner:latest
+      build-image: ghcr.io/edulution-io/lmndev-runner:latest
       build-command: /opt/lmndev/build/linuxmuster-base7.sh
       # Runtime dependencies come from package.edulution.io, so the tests run
       # against the same packages as a server.

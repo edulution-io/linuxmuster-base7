@@ -25,7 +25,8 @@ from .network import ipMatchSubnet, getIpSubnet, getIpBcAddress, \
 from .samba import getBaseDN, adSearch, isDynamicIpDevice, sambaTool
 from .linbo import getGrubPart, getGrubOstype, readStartconf, \
     getStartconfOption, getStartconfPartlabel, getStartconfPartnr, \
-    setGlobalStartconfOption, getStartconfOsValues, getLinboVersion
+    setGlobalStartconfOption, getStartconfOsValues, getLinboGroupId, \
+    splitLinboGroupId, getLinboVersion, LINBO_GROUP_SEPARATOR
 from .certs import encodeCertToBase64, renewCaCertificate, \
     signCertificateWithCa, createCertificateChain, createCnfFromTemplate, \
     createServerCert, buildCaSubjectAndSan, writeCaCertificate
@@ -53,7 +54,8 @@ __all__ = [
     # linbo
     'getGrubPart', 'getGrubOstype', 'readStartconf', 'getStartconfOption',
     'getStartconfPartlabel', 'getStartconfPartnr', 'setGlobalStartconfOption',
-    'getStartconfOsValues', 'getLinboVersion',
+    'getStartconfOsValues', 'getLinboGroupId', 'splitLinboGroupId',
+    'getLinboVersion', 'LINBO_GROUP_SEPARATOR',
     # certs
     'encodeCertToBase64', 'renewCaCertificate', 'signCertificateWithCa',
     'createCertificateChain', 'createCnfFromTemplate', 'createServerCert',

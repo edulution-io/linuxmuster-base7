@@ -138,7 +138,7 @@ def setGlobalStartconfOption(startconf, option, value):
     # insert newline
     content = '\n' + content
     try:
-        line = re.search(r'\n' + option + ' =.*\n',
+        line = re.search(r'\n' + option + r'\s*=.*\n',
                          content, re.IGNORECASE).group(0)
     except Exception:
         line = None

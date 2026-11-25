@@ -4,7 +4,7 @@
 # Description  : Import devices from devices.csv into DHCP, DNS and LINBO/GRUB config
 # Signed-off by: thomas@linuxmuster.net
 # Assisted by  : Claude
-# Date         : 20261124
+# Date         : 20261125
 #
 
 import configparser
@@ -287,8 +287,9 @@ def migrateLegacyGroupFiles(group_id, legacy_groups):
     Before school-qualified group ids every school shared start.conf.<group>
     and <group>.cfg. For a group the school used before, the qualified start.conf
     is a copy of the plain one with its 'Group =' line set to the qualified id
-    (clients read it as HOSTGROUP in offline mode), and an unmanaged grub cfg is
-    copied as well (managed ones are regenerated anyway). Existing qualified
+    (clients read it as HOSTGROUP in offline mode) and its 'School =' line set to
+    the school of the id. An unmanaged grub cfg is copied as well (managed ones
+    are regenerated anyway). Existing qualified
     files are never overwritten, so repeated imports change nothing.
 
     Args:
@@ -304,14 +305,15 @@ def migrateLegacyGroupFiles(group_id, legacy_groups):
         pending_startconf = new_startconf + '.migrating'
         shutil.copy2(old_startconf, pending_startconf)
         try:
-            group_set = setGlobalStartconfOption(pending_startconf, 'Group', group_id)
+            group_set = (setGlobalStartconfOption(pending_startconf, 'Group', group_id)
+                         and setGlobalStartconfOption(pending_startconf, 'School', school))
         except AttributeError:
             group_set = False
         if group_set:
             os.replace(pending_startconf, new_startconf)
         else:
             os.remove(pending_startconf)
-            logToFile('Could not set the group in the copy of ' + old_startconf + ', not migrated.')
+            logToFile('Could not set group and school in the copy of ' + old_startconf + ', not migrated.')
     old_grubcfg = environment.LINBOGRUBDIR + '/' + group + '.cfg'
     new_grubcfg = environment.LINBOGRUBDIR + '/' + group_id + '.cfg'
     if os.path.isfile(old_grubcfg) and not os.path.exists(new_grubcfg):

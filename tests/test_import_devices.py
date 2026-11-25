@@ -4,7 +4,7 @@
 # Description  : Tests for the LINBO group ids that import_devices.py writes
 #                into the DHCP config, the link csv and the start.conf/grub
 #                cfg file names.
-# Date         : 20261124
+# Date         : 20261125
 #
 """
 Tests for the use of getLinboGroupId() in linuxmuster_base7.cli.import_devices.
@@ -349,3 +349,23 @@ def test_one_import_migrates_a_group_only_once(monkeypatch, linbodir):
                         lambda *args: (calls.append(args[0]), real_migrate(*args))[1])
     runImport(monkeypatch, linbodir, 'abc')
     assert calls == ['abc__raum101']
+
+
+def test_migration_sets_the_school_of_the_id(monkeypatch, linbodir):
+    # a start.conf of default-school keeps its School value without the fix
+    (linbodir / 'start.conf.raum101').write_text(
+        '[LINBO]\nServer = 10.0.0.1\nSchool = default-school\nCache = /dev/sda4\nGroup=raum101\n')
+    import_devices.migrateLegacyGroupFiles('abc__raum101', {'raum101'})
+    migrated = (linbodir / 'start.conf.abc__raum101').read_text()
+    assert migrated.count('School') == 1
+    assert 'School = abc\n' in migrated
+    # the plain one is left alone
+    assert 'School = default-school\n' in (linbodir / 'start.conf.raum101').read_text()
+
+
+def test_migration_adds_a_missing_school(monkeypatch, linbodir):
+    (linbodir / 'start.conf.raum101').write_text(PLAIN_STARTCONF)
+    import_devices.migrateLegacyGroupFiles('abc__raum101', {'raum101'})
+    migrated = (linbodir / 'start.conf.abc__raum101').read_text()
+    assert migrated.count('School') == 1
+    assert 'School = abc\n' in migrated
